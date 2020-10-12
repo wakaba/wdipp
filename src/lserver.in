@@ -1,0 +1,9 @@
+#!/bin/bash
+rootpath=$(cd `dirname $0` && pwd)
+cd $rootpath
+{{INSTALL}}
+perl local/bin/pmbp.pl --install-make && \
+make deps-lserver && \
+exec $rootpath/local/run-local-server
+
+## License: Public Domain.

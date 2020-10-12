@@ -14,6 +14,9 @@ updatenightly: local/bin/pmbp.pl
 ## ------ Setup ------
 
 deps: git-submodules pmbp-install
+	git rev-parse HEAD > rev
+
+deps-lserver: deps
 
 git-submodules:
 	$(GIT) submodule update --init
@@ -30,7 +33,10 @@ pmbp-update: git-submodules pmbp-upgrade
 pmbp-install: pmbp-upgrade
 	perl local/bin/pmbp.pl $(PMBP_OPTIONS) --install \
             --create-perl-command-shortcut @perl \
-            --create-perl-command-shortcut @prove
+            --create-perl-command-shortcut @prove \
+	    --create-perl-command-shortcut @local/run-local-server=perl\ bin/local-server.pl \
+	    --create-bootstrap-script "src/lserver.in lserver"
+	chmod u+x ./lserver
 
 ## ------ Tests ------
 

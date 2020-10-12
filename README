@@ -1,0 +1,23 @@
+wdipp
+~~~~~
+
+* Usage
+
+As a locally running server (for devs):
+
+  $ git clone https://github.com/wakaba/wdipp
+  $ cd wdipp
+  $ ./lserver
+
+* Author
+
+Wakaba <wakaba@suikawiki.org>.
+
+* Acknowledgements
+
+Inspired by <https://github.com/nobuoka/wd-image-processor>, authored
+by OND Inc. and nobuoka.
+
+* License
+
+See |LICENSE|.
