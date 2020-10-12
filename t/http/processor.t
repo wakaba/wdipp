@@ -136,9 +136,42 @@ Test {
       is $res->header ('content-type'), 'image/png';
       is $res->header ('cache-control'), 'public,max-age=5331';
       like $res->body_bytes, qr{^\x89PNG};
+      is $res->header ('access-control-allow-origin'), undef;
     } $current->c;
   });
-} n => 4, name => 'test4';
+} n => 5, name => 'test4';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['test4'], headers => {
+    origin => q<http://domain1.test>,
+  })->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 201;
+      is $res->header ('content-type'), 'image/png';
+      is $res->header ('cache-control'), 'public,max-age=5331';
+      like $res->body_bytes, qr{^\x89PNG};
+      is $res->header ('access-control-allow-origin'), undef;
+    } $current->c;
+  });
+} n => 5, name => 'CORS bad origin';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['test4'], headers => {
+    origin => q<https://domain1.test>,
+  })->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 201;
+      is $res->header ('content-type'), 'image/png';
+      is $res->header ('cache-control'), 'public,max-age=5331';
+      like $res->body_bytes, qr{^\x89PNG};
+      is $res->header ('access-control-allow-origin'), 'https://domain1.test';
+    } $current->c;
+  });
+} n => 5, name => 'CORS good origin';
 
 RUN;
 

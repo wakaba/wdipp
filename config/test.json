@@ -19,6 +19,10 @@
 
     "dummy": {}
   },
+  "accessControlAllowOrigins": [
+    "https://domain1.test",
+    "https://test.domain2.test"
+  ],
 
   "git_sha": null
 }

@@ -13,6 +13,11 @@ my $Config = json_bytes2perl $config_path->slurp;
 $Config->{git_sha} = path (__FILE__)->parent->parent->child ('rev')->slurp;
 $Config->{git_sha} =~ s/[\x0D\x0A]//g;
 
+$Config->{_cors_allowed} = {};
+for (@{$Config->{accessControlAllowOrigins} or []}) {
+  $Config->{_cors_allowed}->{$_} = 1;
+}
+
 sub start ($%) {
   my ($class, %args) = @_;
   my ($r, $s) = promised_cv;

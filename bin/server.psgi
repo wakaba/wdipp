@@ -114,6 +114,13 @@ return sub {
     }
 
     return Promise->resolve->then (sub {
+      my $origin = $app->http->get_request_header ('origin');
+      if (defined $origin) {
+        if ($config->{_cors_allowed}->{$origin}) {
+          $app->http->set_response_header ('access-control-allow-origin', $origin);
+        }
+      }
+      
       if (@$path == 1 and $path->[0] =~ /\A[0-9A-Za-z_]+\z/) {
         return run_processor ($app, $path->[0]);
       }
