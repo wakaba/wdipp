@@ -10,12 +10,18 @@
     "test2": {},
     "test3": {},
     "test4": {},
+    "echo": {},
     "processornotfound": {},
     "processorthrows": {},
     "processorresolves": {},
     "processorrejects": {},
     "badresult": {},
     "badselectorerror": {},
+    "elementnotfound": {},
+    "objectreturned": {},
+    "nullreturned": {},
+    "undefinedreturned": {},
+    "defaultstatus": {},
 
     "dummy": {}
   },

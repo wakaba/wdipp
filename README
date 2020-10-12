@@ -1,13 +1,129 @@
 wdipp
 ~~~~~
 
-* Usage
+* Running the server
 
 As a locally running server (for devs):
 
   $ git clone https://github.com/wakaba/wdipp
   $ cd wdipp
   $ ./lserver
+
+XXX port
+
+* Processors
+
+A processor is the implementation of an HTTP end point.
+
+A processor has a unique name, which is a string of one or more
+characters in the range [0-9A-Za-z_].
+
+** Defining a processor
+
+XXX processor's code
+
+** Invoking a processor
+
+A processor can be invoked by sending an HTTP |GET| request to the
+wdipp server with the URL path |/{name}| where {name} is the
+processor's name.
+
+If the |arg| parameter is specified, the first parameter value,
+decoded as a UTF-8 string, is used as the argument string.  Otherwise,
+the argument string is set to a JavaScript value |null|.
+
+The processor's code is invoked with the argument string on an empty
+document.
+
+The processor's code is expected to return a JavaScript object, or
+return a |Promise|, which is to be resolved with a JavaScript object.
+That object is interpreted as the result object.
+
+If the processor's code throws, or returns a |Promise| but it is
+rejected, a |500| error response is returned.  The processor's code
+should not throw or reject.
+
+A result object is a JavaScript object with following name/value
+pairs:
+
+  content : Object
+
+    A JavaScript object with following name/value pairs:
+
+      type : "text" | "screenshot"
+
+        The type of the response.  Required.
+
+      targetElement : Selector?
+
+        A group of selectors, used to select an element in the
+        document tree.  Required and allowed if |type| is
+        |screenshot|.
+
+        The response is a PNG image, which is a screenshot of the
+        selected element.
+
+      value : String?
+
+        The text.  Required and allowed if |type| is |text|.
+
+        The response is a UTF-8 plain text whose string value is
+        |value|.
+
+  httpCache : Object?
+
+    A JavaScript object with following name/value pairs:
+
+      maxAge : Integer?
+
+        The lifetime of the response.  If specified, a |cache-control:
+        public, max-age=/age/| response header, where /age/ is the
+        |maxAge| value, is added.
+
+  statusCode : Number
+
+    An HTTP status code within the range 200-599.  If omitted,
+    defaulted to 200.
+
+* Configuration file
+
+The wdipp server must be started with a configuration file, its path
+specified in the |CONFIG_FILE| environment variable.
+
+A configuration file is a JSON file, which contains a JSON object with
+following name/value paris:
+
+  accessControlAllowOrigins: Array
+
+    XXX
+
+  is_live : Boolean
+
+    Whether the wdipp server is running in the live (or production)
+    mode.
+
+  is_local : Boolean
+
+    Whether the wdipp server is running in the local mode
+    (i.e. running within the developer's local environment).
+
+  is_test_script : Boolean
+
+    Whether the wdipp server is running as part of a test script's
+    setup.
+
+  processors : Object
+
+    XXX
+
+  processors_dir : Path to the directory
+
+    XXX
+
+  wd_url : Absolute URL whose scheme is |http:| or |https:|
+
+    The absolute URL of the root directory of the WebDriver server
+    used by the wdipp server.
 
 * Author
 

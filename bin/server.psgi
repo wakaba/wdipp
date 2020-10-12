@@ -32,10 +32,13 @@ sub run_processor ($$) {
   )->then (sub {
     my $session = $_[0];
 
+    my $arg = $app->text_param ('arg'); # or undef
+    # XXX signature
+    
     return $js_file->read_char_string->then (sub {
       return $session->execute (q{
-        return new Function (arguments[0]) ();
-      }, [$_[0]])->then (sub {
+        return new Function (arguments[0]).apply (null, arguments[1]);
+      }, [$_[0], [$arg]])->then (sub {
         my $res = $_[0];
         my $value = $res->json->{value};
         unless (defined $value and
@@ -67,7 +70,7 @@ sub run_processor ($$) {
           });
         } else {
           $headers->();
-          return $app->send_plain_text ($value->{content}->{value});
+          return $app->send_plain_text ($value->{content}->{value} // '');
         }
       }, sub {
         my $res = $_[0];

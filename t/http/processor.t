@@ -143,6 +143,65 @@ Test {
 
 Test {
   my $current = shift;
+  return $current->client->request (path => ['objectreturned'])->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 200;
+      is $res->header ('content-type'), 'text/plain; charset=utf-8';
+      like $res->body_bytes, qr{^HASH\(.+\)$};
+    } $current->c;
+  });
+} n => 3, name => 'objectreturned';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['nullreturned'])->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 200;
+      is $res->header ('content-type'), 'text/plain; charset=utf-8';
+      is $res->body_bytes, q{};
+    } $current->c;
+  });
+} n => 3, name => 'nullreturned';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['undefinedreturned'])->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 200;
+      is $res->header ('content-type'), 'text/plain; charset=utf-8';
+      is $res->body_bytes, q{};
+    } $current->c;
+  });
+} n => 3, name => 'undefinedreturned';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['defaultstatus'])->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 200;
+      is $res->header ('content-type'), 'text/plain; charset=utf-8';
+      is $res->body_bytes, q{Hello};
+    } $current->c;
+  });
+} n => 3, name => 'default status code';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['elementnotfound'])->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 500;
+      is $res->body_bytes, q{500 Failed};
+    } $current->c;
+  });
+} n => 2, name => 'element not found';
+
+Test {
+  my $current = shift;
   return $current->client->request (path => ['test4'], headers => {
     origin => q<http://domain1.test>,
   })->then (sub {
@@ -172,6 +231,31 @@ Test {
     } $current->c;
   });
 } n => 5, name => 'CORS good origin';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['echo'], params => {
+    arg => do { use utf8; ["あいうえお?Q&A#2", "abc"] },
+  })->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 200;
+      is $res->body_bytes, "string,あいうえお?Q&A#2";
+    } $current->c;
+  });
+} n => 2, name => 'arg';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['echo'], params => {
+  })->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 200;
+      is $res->body_bytes, "object,";
+    } $current->c;
+  });
+} n => 2, name => 'arg missing';
 
 RUN;
 
