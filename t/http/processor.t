@@ -65,6 +65,18 @@ Test {
 
 Test {
   my $current = shift;
+  return $current->client->request (path => ['badselectorerror'])->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 500;
+      is $res->header ('content-type'), 'text/plain; charset=us-ascii';
+      is $res->body_bytes, "500 Failed";
+    } $current->c;
+  });
+} n => 3, name => 'Bad selector';
+
+Test {
+  my $current = shift;
   return $current->client->request (path => ['processorresolves'])->then (sub {
     my $res = $_[0];
     test {
@@ -86,6 +98,32 @@ Test {
     } $current->c;
   });
 } n => 3, name => 'test1';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['test2'])->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 201;
+      is $res->header ('content-type'), 'image/png';
+      like $res->body_bytes, qr{^\x89PNG};
+      $current->save_artifact ($res->body_bytes, ['image'], 'png');
+    } $current->c;
+  });
+} n => 3, name => 'test2';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['test3'])->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 201;
+      is $res->header ('content-type'), 'image/png';
+      like $res->body_bytes, qr{^\x89PNG};
+      $current->save_artifact ($res->body_bytes, ['image'], 'png');
+    } $current->c;
+  });
+} n => 3, name => 'test3';
 
 RUN;
 

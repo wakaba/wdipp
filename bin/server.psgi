@@ -46,7 +46,19 @@ sub run_processor ($$) {
           return $app->throw_error (500, reason_phrase => 'Bad result');
         }
         $app->http->set_status ($value->{statusCode}) if defined $value->{statusCode};
-        $app->send_plain_text ($value->{content}->{value});
+        if (($value->{content}->{type} // '') eq 'screenshot') {
+          return $session->screenshot (selector => $value->{content}->{targetElement})->then (sub {
+            $app->http->set_response_header ('content-type', 'image/png');
+            $app->http->send_response_body_as_ref (\($_[0]));
+            return $app->http->close_response_body;
+          }, sub {
+            my $res = $_[0];
+            warn "Processor error: (screenshot) $_[0]";
+            return $app->throw_error (500, reason_phrase => 'Failed');
+          });
+        } else {
+          return $app->send_plain_text ($value->{content}->{value});
+        }
       }, sub {
         my $res = $_[0];
         warn "Processor error: $_[0]";

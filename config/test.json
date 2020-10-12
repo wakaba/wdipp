@@ -7,11 +7,14 @@
   "processors_dir": null,
   "processors": {
     "test1": {},
+    "test2": {},
+    "test3": {},
     "processornotfound": {},
     "processorthrows": {},
     "processorresolves": {},
     "processorrejects": {},
     "badresult": {},
+    "badselectorerror": {},
 
     "dummy": {}
   },
