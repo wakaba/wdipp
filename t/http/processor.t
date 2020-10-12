@@ -70,10 +70,11 @@ Test {
     test {
       is $res->status, 500;
       is $res->header ('content-type'), 'text/plain; charset=us-ascii';
+      is $res->header ('cache-control'), undef;
       is $res->body_bytes, "500 Failed";
     } $current->c;
   });
-} n => 3, name => 'Bad selector';
+} n => 4, name => 'Bad selector';
 
 Test {
   my $current = shift;
@@ -82,10 +83,11 @@ Test {
     test {
       is $res->status, 403;
       is $res->header ('content-type'), 'text/plain; charset=utf-8';
+      is $res->header ('cache-control'), undef;
       is $res->body_bytes, "Response あいうえお";
     } $current->c;
   });
-} n => 3, name => 'resolves';
+} n => 4, name => 'resolves';
 
 Test {
   my $current = shift;
@@ -124,6 +126,19 @@ Test {
     } $current->c;
   });
 } n => 3, name => 'test3';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['test4'])->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 201;
+      is $res->header ('content-type'), 'image/png';
+      is $res->header ('cache-control'), 'public,max-age=5331';
+      like $res->body_bytes, qr{^\x89PNG};
+    } $current->c;
+  });
+} n => 4, name => 'test4';
 
 RUN;
 

@@ -45,10 +45,19 @@ sub run_processor ($$) {
           warn "Bad JavaScript response: " . perl2json_bytes $value;
           return $app->throw_error (500, reason_phrase => 'Bad result');
         }
-        $app->http->set_status ($value->{statusCode}) if defined $value->{statusCode};
+        my $headers = sub {
+          $app->http->set_status ($value->{statusCode}) if defined $value->{statusCode};
+          if (defined $value->{httpCache} and
+              ref $value->{httpCache} eq 'HASH' and
+              defined $value->{httpCache}->{maxAge}) {
+            $app->http->add_response_header
+                ('cache-control', sprintf 'public,max-age=%d', $value->{httpCache}->{maxAge});
+          }
+        }; # $headers
         if (($value->{content}->{type} // '') eq 'screenshot') {
           return $session->screenshot (selector => $value->{content}->{targetElement})->then (sub {
             $app->http->set_response_header ('content-type', 'image/png');
+            $headers->();
             $app->http->send_response_body_as_ref (\($_[0]));
             return $app->http->close_response_body;
           }, sub {
@@ -57,6 +66,7 @@ sub run_processor ($$) {
             return $app->throw_error (500, reason_phrase => 'Failed');
           });
         } else {
+          $headers->();
           return $app->send_plain_text ($value->{content}->{value});
         }
       }, sub {
