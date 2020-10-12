@@ -25,12 +25,14 @@ my $config_path = $RootPath->child ('config/local.json');
     $config_path = $local_config_path;
   }
 }
+my $processors_path = $LocalPath->child ('processors');
 
 WDIPPSS->run (
   data_root_path => $LocalPath,
   app_host => Web::Host->parse_string ('0'),
   app_port => 12521,
   app_config_path => $config_path,
+  processors_path => $processors_path,
 )->then (sub {
   my $v = $_[0];
   warn sprintf "\n\nURL: <%s>\n\n",

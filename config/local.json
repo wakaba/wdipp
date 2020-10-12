@@ -3,5 +3,10 @@
   "is_local": true,
   "is_test_script": false,
 
+  "wd_url": null,
+  "processors_dir": null,
+  "processors": {
+  },
+
   "git_sha": null
 }

@@ -3,5 +3,18 @@
   "is_local": false,
   "is_test_script": true,
 
+  "wd_url": null,
+  "processors_dir": null,
+  "processors": {
+    "test1": {},
+    "processornotfound": {},
+    "processorthrows": {},
+    "processorresolves": {},
+    "processorrejects": {},
+    "badresult": {},
+
+    "dummy": {}
+  },
+
   "git_sha": null
 }

@@ -64,6 +64,7 @@ sub RUN () {
   my $v = WDIPPSS->run (
     signal => $ac->signal,
     app_config_path => $RootPath->child ('config/test.json'),
+    processors_path => $RootPath->child ('t_deps/processors'),
     need_browser => $NeedBrowser,
     browser_type => $ENV{TEST_WD_BROWSER}, # or undef
   )->to_cv->recv;

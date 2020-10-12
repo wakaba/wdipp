@@ -42,8 +42,14 @@ sub run ($%) {
           $data->{envs} = my $envs = {};
           if ($use_docker) {
             $self->set_docker_envs ('proxy' => $envs);
+            #$config->{wd_url} = $self->docker_url ('wd')->stringify;
           } else {
             $self->set_local_envs ('proxy' => $envs);
+            #$config->{wd_url} = $self->local_url ('wd')->stringify;
+          }
+          $config->{wd_url} = q<http://wd.server.test>;
+          if (defined $args{processors_path}) {
+            $config->{processors_dir} = $args{processors_path}->absolute;
           }
 
           $data->{config_path} = $self->path ('app-config.json');
@@ -55,7 +61,7 @@ sub run ($%) {
     }, # app_envs
     app => {
       handler => 'ServerSet::SarzeProcessHandler',
-      requires => ['app_config', 'proxy'],
+      requires => ['app_config', 'proxy', 'wd'],
       prepare => sub {
         my ($handler, $self, $args, $data) = @_;
         return Promise->resolve ($args->{receive_app_config_data})->then (sub {
@@ -77,7 +83,7 @@ sub run ($%) {
     }, # app
     app_docker => {
       handler => 'ServerSet::DockerHandler',
-      requires => ['app_config', 'proxy'],
+      requires => ['app_config', 'proxy', 'wd'],
       prepare => sub {
         my ($handler, $self, $args, $data) = @_;
         return Promise->resolve ($args->{receive_app_config_data})->then (sub {
@@ -146,7 +152,6 @@ sub run ($%) {
         $self->set_local_envs ('proxy', $data->{local_envs} = {});
         $self->set_docker_envs ('proxy', $data->{docker_envs} = {});
 
-        $data->{wd_local_url} = $self->local_url ('wd');
         $data->{artifacts_path} = $self->artifacts_path (undef);
 
         my $rev_path = $RootPath->child ('rev');
@@ -173,6 +178,7 @@ sub run ($%) {
       app_config => {
         app_config_path => $args->{app_config_path},
         app_docker_image => $app_docker_image || undef,
+        processors_path => $args->{processors_path},
       },
       app => {
         disabled => !! $app_docker_image,
@@ -185,7 +191,6 @@ sub run ($%) {
         disabled => $args->{dont_run_xs},
       },
       wd => {
-        disabled => ! $args->{need_browser},
         browser_type => $args->{browser_type},
       },
       _ => {

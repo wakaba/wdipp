@@ -46,10 +46,6 @@
 	path = t_deps/modules/serverset
 	url = https://github.com/wakaba/serverset
 	track = master
-[submodule "t_deps/modules/promised-file"]
-	path = t_deps/modules/promised-file
-	url = https://github.com/wakaba/perl-promised-file
-	track = master
 [submodule "t_deps/modules/promised-command"]
 	path = t_deps/modules/promised-command
 	url = https://github.com/wakaba/perl-promised-command
@@ -73,4 +69,8 @@
 [submodule "modules/web-css"]
 	path = modules/web-css
 	url = https://github.com/manakai/perl-web-css
+	track = master
+[submodule "modules/promised-file"]
+	path = modules/promised-file
+	url = https://github.com/wakaba/perl-promised-file
 	track = master

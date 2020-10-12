@@ -2,42 +2,84 @@
 use strict;
 use warnings;
 use Path::Tiny;
+use Time::HiRes qw(time);
 use Promise;
 use Promised::Flow;
+use Promised::File;
 use JSON::PS;
+use Web::URL;
 use Wanage::HTTP;
 use Warabe::App;
 
 use WorkerState;
 
-my $config_path = path ($ENV{CONFIG_FILE} // die "No |CONFIG_FILE|");
-my $Config = json_bytes2perl $config_path->slurp;
+sub run_processor ($$) {
+  my ($app, $name) = @_;
+  my $config = $app->http->server_state->data->{config};
+  my $def = $config->{processors}->{$name};
+  unless (defined $def) {
+    return $app->throw_error (404);
+  }
 
-$Config->{git_sha} = path (__FILE__)->parent->parent->child ('rev')->slurp;
-$Config->{git_sha} =~ s/[\x0D\x0A]//g;
+  my $js_path = path ($config->{processors_dir})->child ($name . '.js');
+  my $js_file = Promised::File->new_from_path ($js_path);
+
+  my $wd = Web::Driver::Client::Connection->new_from_url
+      (Web::URL->parse_string ($config->{wd_url}));
+  return $wd->new_session (
+    desired => {},
+    #http_proxy_url
+  )->then (sub {
+    my $session = $_[0];
+
+    return $js_file->read_char_string->then (sub {
+      return $session->execute (q{
+        return new Function (arguments[0]) ();
+      }, [$_[0]])->then (sub {
+        my $res = $_[0];
+        my $value = $res->json->{value};
+        unless (defined $value and
+                ref $value eq 'HASH' and
+                defined $value->{content} and
+                ref $value->{content} eq 'HASH') {
+          warn "Bad JavaScript response: " . perl2json_bytes $value;
+          return $app->throw_error (500, reason_phrase => 'Bad result');
+        }
+        $app->http->set_status ($value->{statusCode}) if defined $value->{statusCode};
+        $app->send_plain_text ($value->{content}->{value});
+      }, sub {
+        my $res = $_[0];
+        warn "Processor error: $_[0]";
+        return $app->throw_error (500, reason_phrase => 'Failed');
+      });
+    }, sub {
+      warn "Processor error: $_[0]";
+      return $app->throw_error (500, reason_phrase => 'Bad process');
+    })->finally (sub {
+      return $session->close;
+    });
+  })->finally (sub {
+    return $wd->close;
+  });
+} # run_processor
 
 return sub {
   my $http = Wanage::HTTP->new_from_psgi_env ($_[0]);
   my $app = Warabe::App->new_from_http ($http);
   $app->execute_by_promise (sub {
-    warn sprintf "ACCESS: [%s] %s %s FROM %s %s\n",
-        scalar gmtime,
-        $app->http->request_method, $app->http->url->stringify,
-        $app->http->client_ip_addr->as_text,
-        $app->http->get_request_header ('User-Agent') // '';
-
+    my $config = $app->http->server_state->data->{config};
     $app->http->set_response_header
         ('Strict-Transport-Security',
          'max-age=10886400; includeSubDomains; preload')
-        unless $Config->{is_live};
+        if $config->{is_live} or $config->{is_test_script};
 
     my $path = $app->path_segments;
 
-    if ($path->[0] eq 'robots.txt') {
-      $app->http->set_response_header ('X-Rev' => $Config->{git_sha});
+    if (@$path == 1 and $path->[0] eq 'robots.txt') {
+      $app->http->set_response_header ('X-Rev' => $config->{git_sha});
       $app->http->set_response_last_modified (1556636400);
-      if ($Config->{is_live} or
-          $Config->{is_test_script} or
+      if ($config->{is_live} or
+          $config->{is_test_script} or
           $app->bare_param ('is_live')) {
         return $app->send_plain_text ("");
       } else {
@@ -45,11 +87,15 @@ return sub {
       }
     }
     
-    if ($path->[0] eq 'favicon.ico') {
+    if (@$path == 1 and $path->[0] eq 'favicon.ico') {
       return $app->throw_error (204);
     }
 
     return Promise->resolve->then (sub {
+      if (@$path == 1 and $path->[0] =~ /\A[0-9A-Za-z_]+\z/) {
+        return run_processor ($app, $path->[0]);
+      }
+
       return $app->send_error (404, reason_phrase => 'Page not found');
     })->catch (sub {
       return if UNIVERSAL::isa ($_[0], 'Warabe::App::Done');

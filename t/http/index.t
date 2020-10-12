@@ -10,9 +10,10 @@ Test {
     my $res = $_[0];
     test {
       is $res->status, 404;
+      ok $res->header ('strict-transport-security');
     } $current->c;
   });
-} n => 1, name => '/ GET';
+} n => 2, name => '/ GET';
 
 Test {
   my $current = shift;
@@ -35,6 +36,16 @@ Test {
     } $current->c;
   });
 } n => 1, name => '/favicon.ico';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['hoge.fuga'])->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 404;
+    } $current->c;
+  });
+} n => 1, name => '/hoge.fuga';
 
 RUN;
 
