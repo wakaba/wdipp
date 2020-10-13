@@ -153,10 +153,40 @@ sub run_processor ($$) {
         }; # $headers
         if (($value->{content}->{type} // '') eq 'screenshot') {
           return $session->screenshot (selector => $value->{content}->{targetElement})->then (sub {
-            $app->http->set_response_header ('content-type', 'image/png');
-            $headers->();
-            $app->http->send_response_body_as_ref (\($_[0]));
-            return $app->http->close_response_body;
+            if (($value->{content}->{imageType} // '') eq 'jpeg') {
+              return $session->execute (q{
+                var blob = new Blob ([Uint8Array.from (arguments[0])]);
+                var img = document.createElement ('img');
+                return new Promise ((ok, ng) => {
+                  img.onload = ok;
+                  img.onerror = ng;
+                  img.src = URL.createObjectURL (blob);
+                }).then (() => {
+                  var canvas = document.createElement ('canvas');
+                  canvas.width = img.naturalWidth;
+                  canvas.height = img.naturalHeight;
+                  var ctx = canvas.getContext ('2d');
+                  ctx.drawImage (img, 0, 0);
+                  return canvas.toDataURL ("image/jpeg", {quality: arguments[1]
+});
+                });
+              }, [
+                [map { ord $_ } split //, $_[0]],
+                $value->{content}->{imageQuality},
+              ])->then (sub {
+                $app->http->set_response_header ('content-type', 'image/jpeg');
+                $headers->();
+                my $v = $_[0]->json->{value};
+                $v =~ s{^data:image/jpeg;base64,}{}g;
+                $app->http->send_response_body_as_ref (\(decode_web_base64 $v));
+                return $app->http->close_response_body;
+              });
+            } else { # PNG
+              $app->http->set_response_header ('content-type', 'image/png');
+              $headers->();
+              $app->http->send_response_body_as_ref (\($_[0]));
+              return $app->http->close_response_body;
+            }
           }, sub {
             my $res = $_[0];
             warn "Processor error: (screenshot) $_[0]";

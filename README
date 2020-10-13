@@ -79,13 +79,24 @@ pairs:
 
         The type of the response.  Required.
 
+      imageType : "png" | "jpeg" ?
+
+        The reponse image type.  Allowed if |type| is |screenshot|.
+        If omitted, defaulted to |png|.
+
+      imageQuality : [0.0, 1.0] ?
+
+        The response image's quality, if |imageType| is |jpeg|.  The
+        value has the same semantics with the |toDataURL| method of
+        the |HTMLCanvasElement| interface.
+
       targetElement : Selector?
 
         A group of selectors, used to select an element in the
         document tree.  Required and allowed if |type| is
         |screenshot|.
 
-        The response is a PNG image, which is a screenshot of the
+        The response is an image, which is a screenshot of the
         selected element.
 
       value : String?

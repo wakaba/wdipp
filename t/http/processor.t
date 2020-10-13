@@ -125,7 +125,35 @@ Test {
       $current->save_artifact ($res->body_bytes, ['image'], 'png');
     } $current->c;
   });
-} n => 3, name => 'test3';
+} n => 3, name => 'test3 element screenshot';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['jpeg'])->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 201;
+      is $res->header ('content-type'), 'image/jpeg';
+      like $res->body_bytes, qr{^\xFF\xD8\xFF};
+      $current->save_artifact ($res->body_bytes, ['image'], 'jpeg');
+    } $current->c;
+  });
+} n => 3, name => 'element screenshot jpeg';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['jpeg'], params => {
+    arg => '0.1',
+  })->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 201;
+      is $res->header ('content-type'), 'image/jpeg';
+      like $res->body_bytes, qr{^\xFF\xD8\xFF};
+      $current->save_artifact ($res->body_bytes, ['image'], 'jpeg');
+    } $current->c;
+  });
+} n => 3, name => 'element screenshot jpeg with quality';
 
 Test {
   my $current = shift;
