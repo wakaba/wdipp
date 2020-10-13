@@ -16,10 +16,30 @@ use Warabe::App;
 
 use WorkerState;
 
+sub get_session ($) {
+  my $sdata = shift;
+  my $wd = Web::Driver::Client::Connection->new_from_url
+      (Web::URL->parse_string ($sdata->{config}->{wd_url}));
+  my $key = rand;
+  my $session;
+  my $abort = sub {
+    delete $sdata->{wds}->{$key};
+    $session->close if defined $session;
+    return $wd->close;
+  };
+  return $wd->new_session (
+    desired => {},
+    #http_proxy_url
+  )->then (sub {
+    $session = $_[0];
+    return $sdata->{wds}->{$key} = [$wd, $session, $abort];
+  });
+} # get_session
+
 sub run_processor ($$) {
   my ($app, $name) = @_;
-  my $config = $app->http->server_state->data->{config};
-  my $def = $config->{processors}->{$name};
+  my $sdata = $app->http->server_state->data;
+  my $def = $sdata->{config}->{processors}->{$name};
   unless (defined $def) {
     return $app->throw_error (404, reason_phrase => 'No processor');
   }
@@ -33,23 +53,17 @@ sub run_processor ($$) {
         unless $sig_got eq $sig_expected;
   }
   
-  my $js_path = path ($config->{processors_dir})->child ($name . '.js');
+  my $js_path = path ($sdata->{config}->{processors_dir})->child ($name . '.js');
   my $js_file = Promised::File->new_from_path ($js_path);
-
-  my $wd = Web::Driver::Client::Connection->new_from_url
-      (Web::URL->parse_string ($config->{wd_url}));
-  my $session;
   
   my $timeout = $def->{timeout} || 60;
+  my $abort = sub { };
   return Promise->resolve->then (sub {
     return promised_timeout {
-
-  return $wd->new_session (
-    desired => {},
-    #http_proxy_url
-  )->then (sub {
-    $session = $_[0];
-    
+      return get_session ($sdata)->then (sub {
+        my $session;
+        (undef, $session, $abort) = @{$_[0]};
+        
     return $js_file->read_char_string->then (sub {
       return $session->execute (q{
         return new Function (arguments[0]).apply (null, arguments[1]);
@@ -81,6 +95,7 @@ sub run_processor ($$) {
           }, sub {
             my $res = $_[0];
             warn "Processor error: (screenshot) $_[0]";
+            $abort->();
             return $app->throw_error (500, reason_phrase => 'Failed');
           });
         } else {
@@ -90,24 +105,22 @@ sub run_processor ($$) {
       }, sub {
         my $res = $_[0];
         warn "Processor error: $_[0]";
+        $abort->();
         return $app->throw_error (500, reason_phrase => 'Failed');
       });
-    }, sub {
+    }, sub { # file not found or error
       warn "Processor error: $_[0]";
       return $app->throw_error (500, reason_phrase => 'Bad process');
     });
-    });
+      }); # session
     } $timeout;
   })->catch (sub {
     my $e = $_[0];
     if (UNIVERSAL::isa ($e, 'Promise::AbortError')) {
       return $app->throw_error (504, reason_phrase => 'Process timeout ('.$timeout.')');
     }
+    $abort->();
     die $e;
-  })->finally (sub {
-    return $session->close if defined $session;
-  })->finally (sub {
-    return $wd->close;
   });
 } # run_processor
 

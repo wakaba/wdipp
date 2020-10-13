@@ -21,10 +21,10 @@ for (@{$Config->{accessControlAllowOrigins} or []}) {
 sub start ($%) {
   my ($class, %args) = @_;
   my ($r, $s) = promised_cv;
-  my $obj = {clients => {}, config => $Config};
+  my $obj = {wds => {}, config => $Config};
   $args{signal}->manakai_onabort (sub {
     return Promise->all ([
-      (map { $_->close } values %{$obj->{clients}}),
+      (map { $_->[2]->() } values %{$obj->{wds}}),
     ])->finally ($s);
   });
   return [$obj, $r];
