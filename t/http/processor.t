@@ -252,10 +252,79 @@ Test {
     my $res = $_[0];
     test {
       is $res->status, 200;
-      is $res->body_bytes, "object,";
+      is $res->body_bytes, "string,";
     } $current->c;
   });
 } n => 2, name => 'arg missing';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['echosigned'], params => {
+    signature => do { use utf8; signature ("", 'key1') },
+  })->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 200;
+      is $res->body_bytes, "string,";
+    } $current->c;
+  });
+} n => 2, name => 'empty arg with key';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['echosigned'], params => {
+    arg => do { use utf8; ["あいうえお?Q&A#2", "abc"] },
+    signature => do { use utf8; signature ("あいうえお?Q&A#2", 'key1') },
+  })->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 200;
+      is $res->body_bytes, "string,あいうえお?Q&A#2";
+    } $current->c;
+  });
+} n => 2, name => 'arg with key';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['echosigned'], params => {
+    arg => do { use utf8; ["あいうえお?Q&A#2", "abc"] },
+    signature => do { use utf8; signature ("あいうえお?Q&A#2", 'key') },
+  })->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 400;
+      is $res->body_bytes, "400 Bad |signature|";
+    } $current->c;
+  });
+} n => 2, name => 'arg with bad key';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['echosigned'], params => {
+    arg => do { use utf8; ["", "abc"] },
+    signature => do { use utf8; signature ("", 'key') },
+  })->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 400;
+      is $res->body_bytes, "400 Bad |signature|";
+    } $current->c;
+  });
+} n => 2, name => 'empty arg with bad key';
+
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['echosigned'], params => {
+    arg => do { use utf8; ["あいうえお?Q&A#2", "abc"] },
+    signature => do { use utf8; signature ("あいうえお?Q&A#3", 'key1') },
+  })->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 400;
+      is $res->body_bytes, "400 Bad |signature|";
+    } $current->c;
+  });
+} n => 2, name => 'arg with bad signature';
 
 RUN;
 

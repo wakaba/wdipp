@@ -12,6 +12,8 @@ use Time::HiRes qw(time);
 use Promise;
 use Promised::Flow;
 use Exporter::Lite;
+use Digest::SHA qw(hmac_sha1);
+use Web::Transport::Base64;
 use Web::Encoding;
 use Web::URL;
 use Web::URL::Encoding;
@@ -30,6 +32,12 @@ our @EXPORT = grep { not /^\$/ }
 
 my $RootPath = path (__FILE__)->parent->parent->parent;
 my $TestScriptPath = path ($0)->relative ($RootPath->child ('t'));
+
+push @EXPORT, qw(signature);
+sub signature ($$) {
+  return encode_web_base64 hmac_sha1
+      (encode_web_utf8 ($_[0]), encode_web_utf8 ($_[1]));
+} # signed
 
 our $ServerData;
 my $NeedBrowser;

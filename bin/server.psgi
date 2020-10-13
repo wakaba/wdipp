@@ -7,6 +7,9 @@ use Promise;
 use Promised::Flow;
 use Promised::File;
 use JSON::PS;
+use Digest::SHA qw(hmac_sha1);
+use Web::Transport::Base64;
+use Web::Encoding;
 use Web::URL;
 use Wanage::HTTP;
 use Warabe::App;
@@ -18,9 +21,18 @@ sub run_processor ($$) {
   my $config = $app->http->server_state->data->{config};
   my $def = $config->{processors}->{$name};
   unless (defined $def) {
-    return $app->throw_error (404);
+    return $app->throw_error (404, reason_phrase => 'No processor');
   }
 
+  my $arg = $app->text_param ('arg') // '';
+  if (defined $def->{key}) {
+    my $sig_got = $app->bare_param ('signature') // '';
+    my $sig_expected = encode_web_base64 hmac_sha1
+        (encode_web_utf8 ($arg), encode_web_utf8 ($def->{key}));
+    return $app->throw_error (400, reason_phrase => 'Bad |signature|')
+        unless $sig_got eq $sig_expected;
+  }
+  
   my $js_path = path ($config->{processors_dir})->child ($name . '.js');
   my $js_file = Promised::File->new_from_path ($js_path);
 
@@ -31,9 +43,6 @@ sub run_processor ($$) {
     #http_proxy_url
   )->then (sub {
     my $session = $_[0];
-
-    my $arg = $app->text_param ('arg'); # or undef
-    # XXX signature
     
     return $js_file->read_char_string->then (sub {
       return $session->execute (q{

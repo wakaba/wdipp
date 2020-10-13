@@ -22,6 +22,11 @@ characters in the range [0-9A-Za-z_].
 
 XXX processor's code
 
+  key : String?
+
+    The processor's signing key.  If omitted, no signature is used for
+    this processor.
+
 ** Invoking a processor
 
 A processor can be invoked by sending an HTTP |GET| request to the
@@ -30,7 +35,22 @@ processor's name.
 
 If the |arg| parameter is specified, the first parameter value,
 decoded as a UTF-8 string, is used as the argument string.  Otherwise,
-the argument string is set to a JavaScript value |null|.
+the argument string is set to the empty string.
+
+If the processor uses the signature (i.e. the processor's signing key
+is specified in the processor's definition's |key|), the |signature|
+parameter must be set to the signature.  The signature is:
+
+  base64 (hmac_sha1 (utf8 (/arg/), utf8 (/key/)))
+
+... where:
+
+  /arg/        The argument string.
+  /key/        The processor's signing key.
+  utf8 ()      UTF-8 encode <https://encoding.spec.whatwg.org/#utf-8-encode>.
+  hmac_sha1 () RFC 2104 HMAC-SHA1 signature algorithm.
+  base64 ()    Forgiving-base64 encode
+               <https://infra.spec.whatwg.org/#forgiving-base64-encode>.
 
 The processor's code is invoked with the argument string on an empty
 document.

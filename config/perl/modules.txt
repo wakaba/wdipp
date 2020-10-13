@@ -1,2 +1,5 @@
+Digest::SHA
+MIME::Base64
 Path::Tiny
 Time::HiRes
+
