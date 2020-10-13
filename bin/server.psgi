@@ -21,81 +21,82 @@ my $DEBUG = $ENV{WDIPP_DEBUG};
 my $AboutBlank = Web::URL->parse_string ("about:blank");
 sub get_session ($) {
   my $sdata = shift;
-  
-  my $wd = Web::Driver::Client::Connection->new_from_url
-      (Web::URL->parse_string ($sdata->{config}->{wd_url}));
-  my $key = rand;
-  my $session;
-  my $done = sub {
-    warn "SESSION: Done $key\n" if $DEBUG;
-    $sdata->{wds}->{$key}->[4] = 0 if defined $sdata->{wds}->{$key};
-  };
-  my $abort = sub {
-    my $reason = shift;
-    warn "SESSION: Abort ($reason) $key\n" if $DEBUG;
-    delete $sdata->{wds}->{$key};
-    $session->close if defined $session;
-    my $close = defined $wd ? $wd->close : undef;
-    undef $session;
-    undef $wd;
-    return $close;
-  };
-  my $reuse;
-  my $err;
-  return Promise->resolve->then (sub {
-    for (keys %{$sdata->{wds}}) {
-      my $v = $sdata->{wds}->{$_};
-      if (! $v->[4]) {
-        $v->[4] = 1;
-        warn "SESSION: Reuse 1 $_\n" if $DEBUG;
-        return $v->[1]->go ($AboutBlank)->then (sub {
-          $reuse = $v;
-        }, sub {
-          $v->[3]->("Stalled 1");
-          return;
-        });
-      }
-    }
-  })->then (sub {
-    return promised_wait_until {
-      return $wd->new_session (
-        desired => {},
-        #http_proxy_url
-      )->then (sub {
-        $session = $_[0];
-        warn "SESSION: Created $key\n" if $DEBUG;
-        return 'done';
-      }, sub {
-        $err = $_[0];
 
+  my $max_count = $sdata->{config}->{max_wd_sessions} = 4;
+  my $create_session = sub {
+    my $wd = Web::Driver::Client::Connection->new_from_url
+        (Web::URL->parse_string ($sdata->{config}->{wd_url}));
+    my $key = rand;
+    my $session;
+    my $done = sub {
+      warn "SESSION: Done $key\n" if $DEBUG;
+      $sdata->{wds}->{$key}->[4] = 0 if defined $sdata->{wds}->{$key};
+    };
+    my $abort = sub {
+      my $reason = shift;
+      warn "SESSION: Abort ($reason) $key\n" if $DEBUG;
+      delete $sdata->{wds}->{$key};
+      $session->close if defined $session;
+      my $close = defined $wd ? $wd->close : undef;
+      undef $session;
+      undef $wd;
+      return $close;
+    };
+    return Promise->resolve->then (sub {
+      return promised_wait_until {
+        my @c = keys %{$sdata->{wds}};
+        if (@c >= $max_count) {
+          warn "SESSION: Too many sessions ($max_count), wait...\n" if $DEBUG;
+          return not 'done';
+        }
+        return $wd->new_session (
+          desired => {},
+          #http_proxy_url
+        )->then (sub {
+          $session = $_[0];
+          warn "SESSION: Created (@{[0+keys %{$sdata->{wds}}]}) $key\n" if $DEBUG;
+          return 'done';
+        }, sub {
+          warn "Failed to create a session: $_[0]";
+          return not 'done';
+        });
+      } timeout => 60, interval => 15;
+    })->then (sub {
+      die unless defined $session;
+      return $sdata->{wds}->{$key} = [$wd, $session, $done, $abort, not 'inuse'];
+    }, sub {
+      $abort->("Session creation failed");
+      die $_[0];
+    });
+  }; # $create_session
+
+  return new Promise (sub {
+    my ($ok, $ng) = @_;
+    my $created;
+    Promise->all ([
+      promised_sleep (1)->then (sub {
+        return if $created;
+        return $create_session->();
+      }),
+      (promised_wait_until {
         for (keys %{$sdata->{wds}}) {
           my $v = $sdata->{wds}->{$_};
           if (! $v->[4]) {
             $v->[4] = 1;
-            warn "SESSION: Reuse 2 $_\n" if $DEBUG;
+            warn "SESSION: Reuse $_\n" if $DEBUG;
             return $v->[1]->go ($AboutBlank)->then (sub {
-              $reuse = $v;
+              $created = 1;
+              $ok->($v);
               return 'done';
             }, sub {
-              $v->[3]->("Stalled 2");
+              $v->[3]->("Stalled");
               return not 'done';
             });
           }
         }
-
         return not 'done';
-      });
-    } timeout => 60, interval => 10;
-  })->then (sub {
-    if (defined $reuse) {
-      $abort->("Use another");
-      return $reuse;
-    }
-    die unless defined $session;
-    return $sdata->{wds}->{$key} = [$wd, $session, $done, $abort, 'inuse'];
-  }, sub {
-    $abort->();
-    die $err // $_[0];
+      } timeout => 60, interval => 3),
+    ])->catch ($ng);
   });
 } # get_session
 
@@ -133,7 +134,6 @@ sub run_processor ($$) {
         return new Function (arguments[0]).apply (null, arguments[1]);
       }, [$_[0], [$arg]])->then (sub {
         my $res = $_[0];
-        die $res if $res->is_error;
         my $value = $res->json->{value};
         unless (defined $value and
                 ref $value eq 'HASH' and

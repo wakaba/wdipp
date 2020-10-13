@@ -137,6 +137,11 @@ following name/value paris:
     Whether the wdipp server is running as part of a test script's
     setup.
 
+  max_wd_sessions : Positive integer
+
+    The maximum number of concurrent WebDriver sessions the wdipp
+    server is allowed to hold.  Defaulted to 4.
+
   processors : Object
 
     XXX

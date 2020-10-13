@@ -4,6 +4,7 @@
   "is_test_script": false,
 
   "wd_url": null,
+  "max_wd_sessions": 4,
   "processors_dir": null,
   "processors": {
   },
