@@ -22,14 +22,14 @@ sub c ($) {
   return $_[0]->{context};
 } # c
 
-sub client ($) {
-  my ($self) = @_;
-  return $self->client_for ($self->{server_data}->{app_client_url});
+sub client ($;$) {
+  my ($self, $key) = @_;
+  return $self->client_for ($self->{server_data}->{app_client_url}, $key);
 } # client
 
-sub client_for ($$) {
-  my ($self, $url) = @_;
-  $self->{clients}->{$url->get_origin->to_ascii} ||= Web::Transport::BasicClient->new_from_url ($url, {
+sub client_for ($$;$) {
+  my ($self, $url, $key) = @_;
+  $self->{clients}->{$url->get_origin->to_ascii, $key // ''} ||= Web::Transport::BasicClient->new_from_url ($url, {
     proxy_manager => ServerSet::ReverseProxyProxyManager->new_from_envs ($self->{server_data}->{local_envs}),
   });
 } # client_for

@@ -10,7 +10,7 @@ Test {
     my $res = $_[0];
     test {
       is $res->status, 404;
-      is $res->body_bytes, '404';
+      is $res->body_bytes, '404 No processor';
     } $current->c;
   });
 } n => 2, name => 'No processor';
@@ -337,6 +337,24 @@ Test {
     } $current->c;
   });
 } n => 2, name => 'timeout error';
+
+Test {
+  my $current = shift;
+  return Promise->all ([
+    map {
+      my $key = $_;
+      $current->client ($key)->request (path => ['sleep'], params => {
+        arg => "5,$key",
+      })->then (sub {
+        my $res = $_[0];
+        test {
+          is $res->status, 200;
+          is $res->body_bytes, $key;
+        } $current->c, name => $key;
+      });
+    } 1..10
+  ]);
+} n => 2*10, name => 'concurrents';
 
 RUN;
 

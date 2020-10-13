@@ -16,23 +16,86 @@ use Warabe::App;
 
 use WorkerState;
 
+my $DEBUG = $ENV{WDIPP_DEBUG};
+
+my $AboutBlank = Web::URL->parse_string ("about:blank");
 sub get_session ($) {
   my $sdata = shift;
+  
   my $wd = Web::Driver::Client::Connection->new_from_url
       (Web::URL->parse_string ($sdata->{config}->{wd_url}));
   my $key = rand;
   my $session;
+  my $done = sub {
+    warn "SESSION: Done $key\n" if $DEBUG;
+    $sdata->{wds}->{$key}->[4] = 0 if defined $sdata->{wds}->{$key};
+  };
   my $abort = sub {
+    my $reason = shift;
+    warn "SESSION: Abort ($reason) $key\n" if $DEBUG;
     delete $sdata->{wds}->{$key};
     $session->close if defined $session;
-    return $wd->close;
+    my $close = defined $wd ? $wd->close : undef;
+    undef $session;
+    undef $wd;
+    return $close;
   };
-  return $wd->new_session (
-    desired => {},
-    #http_proxy_url
-  )->then (sub {
-    $session = $_[0];
-    return $sdata->{wds}->{$key} = [$wd, $session, $abort];
+  my $reuse;
+  my $err;
+  return Promise->resolve->then (sub {
+    for (keys %{$sdata->{wds}}) {
+      my $v = $sdata->{wds}->{$_};
+      if (! $v->[4]) {
+        $v->[4] = 1;
+        warn "SESSION: Reuse 1 $_\n" if $DEBUG;
+        return $v->[1]->go ($AboutBlank)->then (sub {
+          $reuse = $v;
+        }, sub {
+          $v->[3]->("Stalled 1");
+          return;
+        });
+      }
+    }
+  })->then (sub {
+    return promised_wait_until {
+      return $wd->new_session (
+        desired => {},
+        #http_proxy_url
+      )->then (sub {
+        $session = $_[0];
+        warn "SESSION: Created $key\n" if $DEBUG;
+        return 'done';
+      }, sub {
+        $err = $_[0];
+
+        for (keys %{$sdata->{wds}}) {
+          my $v = $sdata->{wds}->{$_};
+          if (! $v->[4]) {
+            $v->[4] = 1;
+            warn "SESSION: Reuse 2 $_\n" if $DEBUG;
+            return $v->[1]->go ($AboutBlank)->then (sub {
+              $reuse = $v;
+              return 'done';
+            }, sub {
+              $v->[3]->("Stalled 2");
+              return not 'done';
+            });
+          }
+        }
+
+        return not 'done';
+      });
+    } timeout => 60, interval => 10;
+  })->then (sub {
+    if (defined $reuse) {
+      $abort->("Use another");
+      return $reuse;
+    }
+    die unless defined $session;
+    return $sdata->{wds}->{$key} = [$wd, $session, $done, $abort, 'inuse'];
+  }, sub {
+    $abort->();
+    die $err // $_[0];
   });
 } # get_session
 
@@ -62,13 +125,15 @@ sub run_processor ($$) {
     return promised_timeout {
       return get_session ($sdata)->then (sub {
         my $session;
-        (undef, $session, $abort) = @{$_[0]};
+        my $done;
+        (undef, $session, $done, $abort, undef) = @{$_[0]};
         
     return $js_file->read_char_string->then (sub {
       return $session->execute (q{
         return new Function (arguments[0]).apply (null, arguments[1]);
       }, [$_[0], [$arg]])->then (sub {
         my $res = $_[0];
+        die $res if $res->is_error;
         my $value = $res->json->{value};
         unless (defined $value and
                 ref $value eq 'HASH' and
@@ -95,7 +160,7 @@ sub run_processor ($$) {
           }, sub {
             my $res = $_[0];
             warn "Processor error: (screenshot) $_[0]";
-            $abort->();
+            $abort->("Screenshot error");
             return $app->throw_error (500, reason_phrase => 'Failed');
           });
         } else {
@@ -105,21 +170,25 @@ sub run_processor ($$) {
       }, sub {
         my $res = $_[0];
         warn "Processor error: $_[0]";
-        $abort->();
+        $abort->("Execute error");
         return $app->throw_error (500, reason_phrase => 'Failed');
       });
     }, sub { # file not found or error
       warn "Processor error: $_[0]";
       return $app->throw_error (500, reason_phrase => 'Bad process');
-    });
+    })->finally ($done);
       }); # session
     } $timeout;
   })->catch (sub {
     my $e = $_[0];
+    if (UNIVERSAL::isa ($e, 'Warabe::App::Done')) {
+      die $e;
+    }
     if (UNIVERSAL::isa ($e, 'Promise::AbortError')) {
+      $abort->("Timeout error");
       return $app->throw_error (504, reason_phrase => 'Process timeout ('.$timeout.')');
     }
-    $abort->();
+    $abort->("Unknown error");
     die $e;
   });
 } # run_processor

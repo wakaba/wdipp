@@ -24,7 +24,7 @@ sub start ($%) {
   my $obj = {wds => {}, config => $Config};
   $args{signal}->manakai_onabort (sub {
     return Promise->all ([
-      (map { $_->[2]->() } values %{$obj->{wds}}),
+      (map { $_->[3]->("Shutdown") } values %{$obj->{wds}}),
     ])->finally ($s);
   });
   return [$obj, $r];
