@@ -38,11 +38,17 @@ sub run_processor ($$) {
 
   my $wd = Web::Driver::Client::Connection->new_from_url
       (Web::URL->parse_string ($config->{wd_url}));
+  my $session;
+  
+  my $timeout = $def->{timeout} || 60;
+  return Promise->resolve->then (sub {
+    return promised_timeout {
+
   return $wd->new_session (
     desired => {},
     #http_proxy_url
   )->then (sub {
-    my $session = $_[0];
+    $session = $_[0];
     
     return $js_file->read_char_string->then (sub {
       return $session->execute (q{
@@ -89,9 +95,17 @@ sub run_processor ($$) {
     }, sub {
       warn "Processor error: $_[0]";
       return $app->throw_error (500, reason_phrase => 'Bad process');
-    })->finally (sub {
-      return $session->close;
     });
+    });
+    } $timeout;
+  })->catch (sub {
+    my $e = $_[0];
+    if (UNIVERSAL::isa ($e, 'Promise::AbortError')) {
+      return $app->throw_error (504, reason_phrase => 'Process timeout ('.$timeout.')');
+    }
+    die $e;
+  })->finally (sub {
+    return $session->close if defined $session;
   })->finally (sub {
     return $wd->close;
   });

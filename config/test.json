@@ -23,6 +23,7 @@
     "nullreturned": {},
     "undefinedreturned": {},
     "defaultstatus": {},
+    "timeout2": {"timeout": 2},
 
     "dummy": {}
   },

@@ -326,6 +326,18 @@ Test {
   });
 } n => 2, name => 'arg with bad signature';
 
+Test {
+  my $current = shift;
+  return $current->client->request (path => ['timeout2'], params => {
+  })->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 504;
+      is $res->body_bytes, "504 Process timeout (2)";
+    } $current->c;
+  });
+} n => 2, name => 'timeout error';
+
 RUN;
 
 =head1 LICENSE

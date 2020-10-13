@@ -27,6 +27,11 @@ XXX processor's code
     The processor's signing key.  If omitted, no signature is used for
     this processor.
 
+  timeout : Seconds?
+
+    The number of seconds of process's timeout.  If omitted, defaulted
+    to 60 (seconds).
+
 ** Invoking a processor
 
 A processor can be invoked by sending an HTTP |GET| request to the
