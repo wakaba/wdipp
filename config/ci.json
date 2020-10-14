@@ -1,0 +1,15 @@
+{
+  "circleci": {
+    "docker-build": "quay.io/wakaba/wdipp",
+    "build": [
+      "make deps"
+    ],
+    "tests": [
+      "docker run --name server -d -p 5511:8080 quay.io/wakaba/wdipp; sleep 10",
+      "curl --dump-header - -f http://localhost:5511/robots.txt",
+      "docker logs server"
+    ],
+    "merger": true,
+    "gaa": true
+  }
+}
