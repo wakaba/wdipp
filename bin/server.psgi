@@ -235,7 +235,8 @@ return sub {
 
     my $path = $app->path_segments;
 
-    if (@$path == 1 and $path->[0] eq 'robots.txt') {
+    if ((@$path == 1 and $path->[0] eq 'robots.txt') or
+        (@$path == 3 and $path->[0] eq '-' and $path->[1] eq 'health')) {
       $app->http->set_response_header ('X-Rev' => $config->{git_sha});
       $app->http->set_response_last_modified (1556636400);
       if ($config->{is_live} or
