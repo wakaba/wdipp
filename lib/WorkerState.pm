@@ -9,6 +9,7 @@ use Web::Driver::Client::Connection;
 
 my $config_path = path ($ENV{CONFIG_FILE} // die "No |CONFIG_FILE|");
 my $Config = json_bytes2perl $config_path->slurp;
+die "Bad config file |$config_path|" unless defined $Config and ref $Config eq 'HASH';
 
 $Config->{git_sha} = path (__FILE__)->parent->parent->child ('rev')->slurp;
 $Config->{git_sha} =~ s/[\x0D\x0A]//g;
