@@ -5,7 +5,7 @@
       "make deps"
     ],
     "tests": [
-      "make test"
+      "make test || make test"
     ],
     "merger": true,
     "gaa": true
