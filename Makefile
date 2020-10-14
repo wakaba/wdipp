@@ -13,8 +13,9 @@ updatenightly: local/bin/pmbp.pl
 
 ## ------ Setup ------
 
-deps: git-submodules pmbp-install
+deps: git-submodules pmbp-install pmbp-install-local
 	git rev-parse HEAD > rev
+deps-docker: pmbp-install
 
 deps-lserver: deps
 
@@ -32,7 +33,9 @@ pmbp-update: git-submodules pmbp-upgrade
 	perl local/bin/pmbp.pl $(PMBP_OPTIONS) --update
 pmbp-install: pmbp-upgrade
 	perl local/bin/pmbp.pl $(PMBP_OPTIONS) --install \
-            --create-perl-command-shortcut @perl \
+            --create-perl-command-shortcut @perl
+pmbp-install-local: pmbp-upgrade
+	perl local/bin/pmbp.pl $(PMBP_OPTIONS) --install \
             --create-perl-command-shortcut @prove \
 	    --create-perl-command-shortcut @local/run-local-server=perl\ bin/local-server.pl \
 	    --create-bootstrap-script "src/lserver.in lserver"
@@ -47,6 +50,6 @@ test: test-deps test-main
 test-deps: deps
 
 test-main:
-	$(PROVE) t/*.t
+	$(PROVE) t/http/*.t
 
 ## License: Public Domain.
