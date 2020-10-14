@@ -7,7 +7,9 @@
     "tests": [
       "docker run --name server -d -p 5511:8080 quay.io/wakaba/wdipp; sleep 10",
       "curl --dump-header - -f http://localhost:5511/robots.txt",
-      "docker logs server"
+      "docker logs server",
+
+      "make test"
     ],
     "merger": true,
     "gaa": true

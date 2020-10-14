@@ -45,6 +45,11 @@
                }
             },
             {
+               "run" : {
+                  "command" : "make test"
+               }
+            },
+            {
                "store_artifacts" : {
                   "path" : "/tmp/circle-artifacts/build"
                }
@@ -163,7 +168,7 @@
          "triggers" : [
             {
                "schedule" : {
-                  "cron" : "1 18 * * *",
+                  "cron" : "21 18 * * *",
                   "filters" : {
                      "branches" : {
                         "only" : [
