@@ -4,6 +4,7 @@ RUN apt-get update && \
     DEBIAN_FRONTEND="noninteractive" apt-get -y install sudo git wget curl make gcc build-essential libssl-dev && \
     rm -rf /var/lib/apt/lists/*
 
+ADD rev /app/rev
 ADD Makefile /app/
 ADD bin/ /app/bin/
 ADD lib/ /app/lib/

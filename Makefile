@@ -16,7 +16,6 @@ updatenightly: local/bin/pmbp.pl
 deps: git-submodules pmbp-install pmbp-install-local
 	git rev-parse HEAD > rev
 deps-docker: pmbp-install
-	git rev-parse HEAD > rev
 
 deps-lserver: deps
 
