@@ -36,7 +36,7 @@ pmbp-install: pmbp-upgrade
 	perl local/bin/pmbp.pl $(PMBP_OPTIONS) --install \
             --create-perl-command-shortcut @perl
 pmbp-install-local: pmbp-upgrade
-	perl local/bin/pmbp.pl $(PMBP_OPTIONS) \
+	perl local/bin/pmbp.pl $(PMBP_OPTIONS) --install \
             --create-perl-command-shortcut @prove \
 	    --create-perl-command-shortcut @local/run-local-server=perl\ bin/local-server.pl \
 	    --create-bootstrap-script "src/lserver.in lserver"
