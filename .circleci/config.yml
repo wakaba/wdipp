@@ -16,6 +16,17 @@
             },
             {
                "run" : {
+                  "command" : "docker info"
+               }
+            },
+            {
+               "run" : {
+                  "background" : true,
+                  "command" : "docker pull quay.io/wakaba/docker-perl-app-base && docker pull quay.io/wakaba/chromedriver:stable"
+               }
+            },
+            {
+               "run" : {
                   "command" : "make deps"
                }
             },
@@ -153,7 +164,7 @@
          "triggers" : [
             {
                "schedule" : {
-                  "cron" : "38 15 * * *",
+                  "cron" : "45 17 * * *",
                   "filters" : {
                      "branches" : {
                         "only" : [
