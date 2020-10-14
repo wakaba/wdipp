@@ -165,9 +165,10 @@ Test {
       is $res->header ('cache-control'), 'public,max-age=5331';
       like $res->body_bytes, qr{^\x89PNG};
       is $res->header ('access-control-allow-origin'), undef;
+      is $res->header ('vary'), 'origin';
     } $current->c;
   });
-} n => 5, name => 'test4';
+} n => 6, name => 'test4';
 
 Test {
   my $current = shift;
@@ -256,9 +257,10 @@ Test {
       is $res->header ('cache-control'), 'public,max-age=5331';
       like $res->body_bytes, qr{^\x89PNG};
       is $res->header ('access-control-allow-origin'), 'https://domain1.test';
+      is $res->header ('vary'), 'origin';
     } $current->c;
   });
-} n => 5, name => 'CORS good origin';
+} n => 6, name => 'CORS good origin';
 
 Test {
   my $current = shift;

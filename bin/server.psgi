@@ -258,6 +258,7 @@ return sub {
           $app->http->set_response_header ('access-control-allow-origin', $origin);
         }
       }
+      $app->http->add_response_header ('vary', 'origin');
       
       if (@$path == 1 and $path->[0] =~ /\A[0-9A-Za-z_]+\z/) {
         return run_processor ($app, $path->[0]);
