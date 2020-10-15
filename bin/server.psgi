@@ -63,7 +63,7 @@ sub get_session ($) {
       } timeout => 60, interval => 15;
     })->then (sub {
       die unless defined $session;
-      return $sdata->{wds}->{$key} = [$wd, $session, $done, $abort, not 'inuse'];
+      return $sdata->{wds}->{$key} = [$wd, $session, $done, $abort, (not 'in use'), $key];
     }, sub {
       $abort->("Session creation failed");
       die $_[0];
@@ -139,12 +139,13 @@ sub run_processor ($$) {
   
   my $timeout = $def->{timeout} || 60;
   my $abort = sub { };
+  my $wdskey;
   return Promise->resolve->then (sub {
     return promised_timeout {
       return get_session ($sdata)->then (sub {
         my $session;
         my $done;
-        (undef, $session, $done, $abort, undef) = @{$_[0]};
+        (undef, $session, $done, $abort, undef, $wdskey) = @{$_[0]};
         
     return $js_file->read_char_string->then (sub {
       return $session->execute (q{
@@ -157,7 +158,7 @@ sub run_processor ($$) {
                 defined $value->{content} and
                 ref $value->{content} eq 'HASH') {
           return error_response $app, $sdata->{config}, 'Bad result',
-              "Bad JavaScript response: " . perl2json_bytes $value;
+              "$wdskey: Bad JavaScript response: " . perl2json_bytes $value;
         }
         my $headers = sub {
           $app->http->set_status ($value->{statusCode}) if defined $value->{statusCode};
@@ -172,7 +173,7 @@ sub run_processor ($$) {
           if (defined $value->{content}->{targetElement} and
               not ref $value->{content}->{targetElement} eq 'HASH') {
             return error_response $app, $sdata->{config}, 'Bad result',
-                "Bad JavaScript response: " . perl2json_bytes $value;
+                "$wdskey: Bad JavaScript response: " . perl2json_bytes $value;
           }
           return $session->screenshot (element => $value->{content}->{targetElement})->then (sub {
             if (($value->{content}->{imageType} // '') eq 'jpeg') {
@@ -213,7 +214,7 @@ sub run_processor ($$) {
             my $res = $_[0];
             $abort->("Screenshot error");
             return error_response $app, $sdata->{config}, 'Failed',
-                "Processor error: (screenshot) $_[0]";
+                "$wdskey: Processor error: (screenshot) $_[0]";
           });
         } else {
           $headers->();
@@ -223,11 +224,11 @@ sub run_processor ($$) {
         my $res = $_[0];
         $abort->("Execute error");
         return error_response $app, $sdata->{config}, 'Failed',
-            "Processor error: $_[0]";
+            "$wdskey: Processor error: $_[0]";
       });
     }, sub { # file not found or error
       return error_response $app, $sdata->{config}, 'Bad process',
-          "Processor error: $_[0]";
+          "$wdskey: Processor error: $_[0]";
     })->finally ($done);
       }); # session
     } $timeout;
