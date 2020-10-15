@@ -1,5 +1,5 @@
 #!/bin/bash
 cd /app
-exec ./perl bin/sarze.pl 8080
+exec ./perl bin/sarze.pl ${PORT:-8080}
 
 ## License: Public Domain.
