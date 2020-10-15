@@ -71,7 +71,7 @@ Test {
       is $res->status, 500;
       is $res->header ('content-type'), 'text/plain; charset=us-ascii';
       is $res->header ('cache-control'), undef;
-      is $res->body_bytes, "500 Failed";
+      is $res->body_bytes, "500 Bad result";
     } $current->c;
   });
 } n => 4, name => 'Bad selector';
@@ -225,6 +225,7 @@ Test {
     test {
       is $res->status, 500;
       is $res->body_bytes, q{500 Failed};
+      $current->save_artifact ($res->body_bytes, ['image'], 'png');
     } $current->c;
   });
 } n => 2, name => 'element not found';

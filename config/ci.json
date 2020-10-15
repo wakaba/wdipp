@@ -9,7 +9,7 @@
       "make deps"
     ],
     "tests": [
-      "make test || make test"
+      "TEST_APP_DOCKER_IMAGE=quay.io/wakaba/wdipp make test || TEST_APP_DOCKER_IMAGE=quay.io/wakaba/wdipp make test"
     ],
     "merger": true,
     "gaa": true

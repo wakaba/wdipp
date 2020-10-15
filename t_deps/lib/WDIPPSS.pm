@@ -43,14 +43,17 @@ sub run ($%) {
           if ($use_docker) {
             $self->set_docker_envs ('proxy' => $envs);
             #$config->{wd_url} = $self->docker_url ('wd')->stringify;
+            if (defined $args{processors_path}) {
+              $config->{processors_dir} = '/processors';
+            }
           } else {
             $self->set_local_envs ('proxy' => $envs);
             #$config->{wd_url} = $self->local_url ('wd')->stringify;
+            if (defined $args{processors_path}) {
+              $config->{processors_dir} = $args{processors_path}->absolute;
+            }
           }
           $config->{wd_url} = q<http://wd.server.test>;
-          if (defined $args{processors_path}) {
-            $config->{processors_dir} = $args{processors_path}->absolute;
-          }
 
           $data->{config_path} = $self->path ('app-config.json');
           return $self->write_json ('app-config.json', $config);
@@ -93,7 +96,8 @@ sub run ($%) {
           return {
             image => $config_data->{app_docker_image},
             volumes => [
-              $config_data->{config_path}->absolute . ':/app-config.json',
+              $config_data->{config_path}->parent->absolute . ':/config',
+              $args->{processors_path}->absolute . ':/processors',
             ],
             net_host => $net_host,
             ports => ($net_host ? undef : [
@@ -101,8 +105,8 @@ sub run ($%) {
             ]),
             environment => {
               %{$config_data->{envs}},
+              CONFIG_FILE => '/config/app-config.json',
               PORT => $port,
-              CONFIG_FILE => '/app-config.json',
             },
             command => ['/server'],
           };
@@ -112,7 +116,7 @@ sub run ($%) {
         my ($handler, $self, $args, $data, $signal) = @_;
         return $self->wait_for_http (
           $self->local_url ('app'),
-          signal => $signal, name => 'wait for app',
+          signal => $signal, name => 'wait for app (app_docker)',
           check => sub {
             return $handler->check_running;
           },
@@ -186,6 +190,7 @@ sub run ($%) {
       app_docker => {
         disabled => ! $app_docker_image,
         docker_net_host => $args->{docker_net_host},
+        processors_path => $args->{processors_path},
       },
       xs => {
         disabled => $args->{dont_run_xs},

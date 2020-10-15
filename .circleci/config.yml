@@ -42,7 +42,7 @@
             },
             {
                "run" : {
-                  "command" : "make test || make test"
+                  "command" : "TEST_APP_DOCKER_IMAGE=quay.io/wakaba/wdipp make test || TEST_APP_DOCKER_IMAGE=quay.io/wakaba/wdipp make test"
                }
             },
             {
@@ -164,7 +164,7 @@
          "triggers" : [
             {
                "schedule" : {
-                  "cron" : "45 17 * * *",
+                  "cron" : "11 19 * * *",
                   "filters" : {
                      "branches" : {
                         "only" : [
