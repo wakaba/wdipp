@@ -100,6 +100,23 @@ sub get_session ($) {
   });
 } # get_session
 
+sub error_response ($$$$) {
+  my ($app, $config, $reason, $details) = @_;
+  $app->http->set_status (500, reason_phrase => $reason);
+  if ($config->{is_live} or $config->{is_test_script}) {
+    $app->http->set_response_header
+        ('Content-Type' => 'text/plain; charset=us-ascii');
+    $app->http->send_response_body_as_text ('500 ' . $reason);
+  } else {
+    $app->http->set_response_header
+        ('Content-Type' => 'text/plain; charset=utf-8');
+    $app->http->send_response_body_as_text ('500 ' . $reason . "\x0A" . $details);
+  }
+  $app->http->close_response_body;
+  warn "ERROR: $details\n";
+  return $app->throw;
+} # error_response
+
 sub run_processor ($$) {
   my ($app, $name) = @_;
   my $sdata = $app->http->server_state->data;
@@ -139,8 +156,8 @@ sub run_processor ($$) {
                 ref $value eq 'HASH' and
                 defined $value->{content} and
                 ref $value->{content} eq 'HASH') {
-          warn "Bad JavaScript response: " . perl2json_bytes $value;
-          return $app->throw_error (500, reason_phrase => 'Bad result');
+          return error_response $app, $sdata->{config}, 'Bad result',
+              "Bad JavaScript response: " . perl2json_bytes $value;
         }
         my $headers = sub {
           $app->http->set_status ($value->{statusCode}) if defined $value->{statusCode};
@@ -189,9 +206,9 @@ sub run_processor ($$) {
             }
           }, sub {
             my $res = $_[0];
-            warn "Processor error: (screenshot) $_[0]";
             $abort->("Screenshot error");
-            return $app->throw_error (500, reason_phrase => 'Failed');
+            return error_response $app, $sdata->{config}, 'Failed',
+                "Processor error: (screenshot) $_[0]";
           });
         } else {
           $headers->();
@@ -199,13 +216,13 @@ sub run_processor ($$) {
         }
       }, sub {
         my $res = $_[0];
-        warn "Processor error: $_[0]";
         $abort->("Execute error");
-        return $app->throw_error (500, reason_phrase => 'Failed');
+        return error_response $app, $sdata->{config}, 'Failed',
+            "Processor error: $_[0]";
       });
     }, sub { # file not found or error
-      warn "Processor error: $_[0]";
-      return $app->throw_error (500, reason_phrase => 'Bad process');
+      return error_response $app, $sdata->{config}, 'Bad process',
+          "Processor error: $_[0]";
     })->finally ($done);
       }); # session
     } $timeout;
