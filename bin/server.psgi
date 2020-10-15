@@ -22,7 +22,8 @@ my $AboutBlank = Web::URL->parse_string ("about:blank");
 sub get_session ($) {
   my $sdata = shift;
 
-  my $max_count = $sdata->{config}->{max_wd_sessions} = 4;
+  my $max_count = $sdata->{config}->{max_wd_sessions} || 4;
+  my $created;
   my $create_session = sub {
     my $wd = Web::Driver::Client::Connection->new_from_url
         (Web::URL->parse_string ($sdata->{config}->{wd_url}));
@@ -44,6 +45,7 @@ sub get_session ($) {
     };
     return Promise->resolve->then (sub {
       return promised_wait_until {
+        die "Create canceled" if $created;
         my @c = keys %{$sdata->{wds}};
         if (@c >= $max_count) {
           warn "SESSION: Too many sessions ($max_count), wait...\n" if $DEBUG;
@@ -72,7 +74,6 @@ sub get_session ($) {
 
   return new Promise (sub {
     my ($ok, $ng) = @_;
-    my $created;
     Promise->all ([
       promised_sleep (1)->then (sub {
         return if $created;
