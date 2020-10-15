@@ -97,7 +97,7 @@ sub run ($%) {
             image => $config_data->{app_docker_image},
             volumes => [
               $config_data->{config_path}->parent->absolute . ':/config',
-              $args{processors_path}->absolute . '/processors',
+              $args->{processors_path}->absolute . '/processors',
             ],
             net_host => $net_host,
             ports => ($net_host ? undef : [
