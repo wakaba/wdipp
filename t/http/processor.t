@@ -225,6 +225,7 @@ Test {
     test {
       is $res->status, 500;
       is $res->body_bytes, q{500 Failed};
+      $current->save_artifact ($res->body_bytes, ['image'], 'png');
     } $current->c;
   });
 } n => 2, name => 'element not found';
