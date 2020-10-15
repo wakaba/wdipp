@@ -169,7 +169,12 @@ sub run_processor ($$) {
           }
         }; # $headers
         if (($value->{content}->{type} // '') eq 'screenshot') {
-          return $session->screenshot (selector => $value->{content}->{targetElement})->then (sub {
+          if (defined $value->{content}->{targetElement} and
+              not ref $value->{content}->{targetElement} eq 'HASH') {
+            return error_response $app, $sdata->{config}, 'Bad result',
+                "Bad JavaScript response: " . perl2json_bytes $value;
+          }
+          return $session->screenshot (element => $value->{content}->{targetElement})->then (sub {
             if (($value->{content}->{imageType} // '') eq 'jpeg') {
               return $session->execute (q{
                 var blob = new Blob ([Uint8Array.from (arguments[0])]);

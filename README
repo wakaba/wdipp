@@ -90,11 +90,10 @@ pairs:
         value has the same semantics with the |toDataURL| method of
         the |HTMLCanvasElement| interface.
 
-      targetElement : Selector?
+      targetElement : Element?
 
-        A group of selectors, used to select an element in the
-        document tree.  Required and allowed if |type| is
-        |screenshot|.
+        An element in the document tree.  Required and allowed if
+        |type| is |screenshot|.
 
         The response is an image, which is a screenshot of the
         selected element.

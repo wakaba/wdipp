@@ -1,3 +1,3 @@
 return {
-  content: {type: "screenshot", targetElement: "foo"},
+  content: {type: "screenshot", targetElement: {"ELEMENT":12}},
 };
