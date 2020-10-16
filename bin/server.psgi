@@ -59,6 +59,12 @@ sub get_session ($) {
           warn "SESSION: $$: Created (@{[0+keys %{$sdata->{wds}}]}) $key\n" if $DEBUG;
           return 'done';
         }, sub {
+          if (UNIVERSAL::isa ($_[0], 'Web::Driver::Client::Response') and
+              defined $_[0]->{response} and
+              ($_[0]->{response}->status == 504 or
+               $_[0]->{response}->status == 503)) { # XXX
+            warn $_[0]->{response}->body_bytes;
+          }
           warn "Failed to create a session: $_[0]";
           return not 'done';
         });
