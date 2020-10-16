@@ -278,7 +278,7 @@ return sub {
     return Promise->resolve->then (sub {
       if (@$path == 3 and $path->[0] eq '-' and $path->[1] eq 'health') {
         my $sdata = $app->http->server_state->data;
-        my @c = grep { $_->[4] } keys %{$sdata->{wds}}; # in use
+        my @c = grep { $_->[4] } values %{$sdata->{wds}}; # in use
         if (@c) {
           return $app->send_plain_text ("");
         }
