@@ -259,8 +259,7 @@ return sub {
 
     my $path = $app->path_segments;
 
-    if ((@$path == 1 and $path->[0] eq 'robots.txt') or
-        (@$path == 3 and $path->[0] eq '-' and $path->[1] eq 'health')) {
+    if (@$path == 1 and $path->[0] eq 'robots.txt') {
       $app->http->set_response_header ('X-Rev' => $config->{git_sha});
       $app->http->set_response_last_modified (1556636400);
       if ($config->{is_live} or
@@ -277,6 +276,32 @@ return sub {
     }
 
     return Promise->resolve->then (sub {
+      if (@$path == 3 and $path->[0] eq '-' and $path->[1] eq 'health') {
+        my $sdata = $app->http->server_state->data;
+        my @c = grep { $_->[4] } keys %{$sdata->{wds}}; # in use
+        if (@c) {
+          return $app->send_plain_text ("");
+        }
+        my $done;
+        return Promise->resolve->then (sub {
+          return promised_timeout {
+            return get_session ($sdata)->then (sub {
+              (undef, undef, $done, undef, undef, undef) = @{$_[0]};
+              return 'done';
+            });
+          } 20;
+        })->then (sub {
+          $done->();
+          return $app->send_plain_text ("");
+        }, sub {
+          my $e = $_[0];
+          if (UNIVERSAL::isa ($e, 'Promise::AbortError')) {
+            return $app->throw_error (504, reason_phrase => 'Timeout (20)');
+          }
+          die $e;
+        });
+      }
+      
       my $origin = $app->http->get_request_header ('origin');
       if (defined $origin) {
         if ($config->{_cors_allowed}->{$origin}) {

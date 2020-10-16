@@ -34,12 +34,10 @@ Test {
     my $res = $_[0];
     test {
       is $res->status, 200;
-      is $res->header ('x-rev'), $current->app_rev;
-      ok $res->header ('x-rev');
       is $res->body_bytes, q{};
     } $current->c;
   });
-} n => 4, name => '/-/health/all (backcompat)';
+} n => 2, name => '/-/health/all';
 
 Test {
   my $current = shift;
