@@ -387,6 +387,23 @@ Test {
   ]);
 } n => 2*10, name => 'concurrents';
 
+Test {
+  my $current = shift;
+  my $p = $current->client (1)->request (path => ['sleep'], params => {
+    arg => "10,abc",
+  });
+  return promised_sleep (5)->then (sub {
+    return $current->client (2)->request (path => ['-', 'health', 'all']);
+  })->then (sub {
+    my $res = $_[0];
+    test {
+      is $res->status, 200;
+      warn $res->header ('x-count');
+    } $current->c;
+    return Promise->all ([$p]);
+  });
+} n => 1, name => 'health check during worker is active';
+
 RUN;
 
 =head1 LICENSE

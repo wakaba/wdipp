@@ -30,12 +30,12 @@ sub get_session ($) {
     my $key = rand;
     my $session;
     my $done = sub {
-      warn "SESSION: Done $key\n" if $DEBUG;
+      warn "SESSION: $$: Done $key\n" if $DEBUG;
       $sdata->{wds}->{$key}->[4] = 0 if defined $sdata->{wds}->{$key};
     };
     my $abort = sub {
       my $reason = shift;
-      warn "SESSION: Abort ($reason) $key\n" if $DEBUG;
+      warn "SESSION: $$: Abort ($reason) $key\n" if $DEBUG;
       delete $sdata->{wds}->{$key};
       $session->close if defined $session;
       my $close = defined $wd ? $wd->close : undef;
@@ -48,7 +48,7 @@ sub get_session ($) {
         die "Create canceled" if $created;
         my @c = keys %{$sdata->{wds}};
         if (@c >= $max_count) {
-          warn "SESSION: Too many sessions ($max_count), wait...\n" if $DEBUG;
+          warn "SESSION: $$: Too many sessions ($max_count), wait...\n" if $DEBUG;
           return not 'done';
         }
         return $wd->new_session (
@@ -56,7 +56,7 @@ sub get_session ($) {
           #http_proxy_url
         )->then (sub {
           $session = $_[0];
-          warn "SESSION: Created (@{[0+keys %{$sdata->{wds}}]}) $key\n" if $DEBUG;
+          warn "SESSION: $$: Created (@{[0+keys %{$sdata->{wds}}]}) $key\n" if $DEBUG;
           return 'done';
         }, sub {
           warn "Failed to create a session: $_[0]";
@@ -84,7 +84,7 @@ sub get_session ($) {
           my $v = $sdata->{wds}->{$_};
           if (! $v->[4]) {
             $v->[4] = 1;
-            warn "SESSION: Reuse $_\n" if $DEBUG;
+            warn "SESSION: $$: Reuse $_\n" if $DEBUG;
             return $v->[1]->go ($AboutBlank)->then (sub {
               $created = 1;
               $ok->($v);
@@ -279,6 +279,7 @@ return sub {
       if (@$path == 3 and $path->[0] eq '-' and $path->[1] eq 'health') {
         my $sdata = $app->http->server_state->data;
         my @c = grep { $_->[4] } values %{$sdata->{wds}}; # in use
+        $app->http->set_response_header ('x-count', 0+@c);
         if (@c) {
           return $app->send_plain_text ("");
         }
