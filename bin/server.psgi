@@ -215,8 +215,7 @@ sub run_processor ($$) {
                   canvas.height = img.naturalHeight;
                   var ctx = canvas.getContext ('2d');
                   ctx.drawImage (img, 0, 0);
-                  return canvas.toDataURL ("image/jpeg", {quality: arguments[1]
-});
+                  return canvas.toDataURL ("image/jpeg", arguments[1]);
                 });
               }, [
                 [map { ord $_ } split //, $_[0]],
