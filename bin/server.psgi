@@ -169,7 +169,7 @@ sub run_processor ($$) {
           }
           return value;
         });
-      }, [$_[0], [$arg]])->then (sub {
+      }, [$_[0], [$arg]], timeout => $timeout * 2)->then (sub {
         my $res = $_[0];
         my $value = $res->json->{value};
         unless (defined $value and
