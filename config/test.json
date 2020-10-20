@@ -8,10 +8,10 @@
   "processors_dir": null,
   "processors": {
     "test1": {},
-    "test2": {"timeout": 120},
-    "test3": {"timeout": 120},
-    "test4": {"timeout": 120},
-    "jpeg": {"timeout": 120},
+    "test2": {"timeout": 180},
+    "test3": {"timeout": 180},
+    "test4": {"timeout": 180},
+    "jpeg": {"timeout": 180},
     "echo": {},
     "echosigned": {"key": "key1"},
     "processornotfound": {},
@@ -26,7 +26,7 @@
     "undefinedreturned": {},
     "defaultstatus": {},
     "timeout2": {"timeout": 2},
-    "sleep": {"timeout": 120},
+    "sleep": {"timeout": 180},
 
     "dummy": {}
   },
