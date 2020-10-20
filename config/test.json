@@ -26,7 +26,7 @@
     "undefinedreturned": {},
     "defaultstatus": {},
     "timeout2": {"timeout": 2},
-    "sleep": {},
+    "sleep": {"timeout": 120},
 
     "dummy": {}
   },

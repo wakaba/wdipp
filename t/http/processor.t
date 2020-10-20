@@ -385,7 +385,7 @@ Test {
       });
     } 1..10
   ]);
-} n => 2*10, name => 'concurrents';
+} n => 2*10, name => 'concurrents', timeout => 300;
 
 Test {
   my $current = shift;
