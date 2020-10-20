@@ -112,7 +112,7 @@ Test {
       $current->save_artifact ($res->body_bytes, ['image'], 'png');
     } $current->c;
   });
-} n => 3, name => 'test2';
+} n => 3, name => 'test2', timeout => 180;
 
 Test {
   my $current = shift;
@@ -125,7 +125,7 @@ Test {
       $current->save_artifact ($res->body_bytes, ['image'], 'png');
     } $current->c;
   });
-} n => 3, name => 'test3 element screenshot';
+} n => 3, name => 'test3 element screenshot', timeout => 180;
 
 Test {
   my $current = shift;
@@ -138,7 +138,7 @@ Test {
       $current->save_artifact ($res->body_bytes, ['image'], 'jpeg');
     } $current->c;
   });
-} n => 3, name => 'element screenshot jpeg';
+} n => 3, name => 'element screenshot jpeg', timeout => 180;
 
 Test {
   my $current = shift;
@@ -153,7 +153,7 @@ Test {
       $current->save_artifact ($res->body_bytes, ['image'], 'jpeg');
     } $current->c;
   });
-} n => 3, name => 'element screenshot jpeg with quality';
+} n => 3, name => 'element screenshot jpeg with quality', timeout => 180;
 
 Test {
   my $current = shift;
@@ -168,7 +168,7 @@ Test {
       is $res->header ('vary'), 'origin';
     } $current->c;
   });
-} n => 6, name => 'test4';
+} n => 6, name => 'test4', timeout => 180;
 
 Test {
   my $current = shift;
@@ -385,7 +385,7 @@ Test {
       });
     } 1..10
   ]);
-} n => 2*10, name => 'concurrents';
+} n => 2*10, name => 'concurrents', timeout => 300;
 
 Test {
   my $current = shift;

@@ -156,8 +156,20 @@ sub run_processor ($$) {
         
     return $js_file->read_char_string->then (sub {
       return $session->execute (q{
-        return new Function (arguments[0]).apply (null, arguments[1]);
-      }, [$_[0], [$arg]])->then (sub {
+        return Promise.resolve ().then (() => new Function (arguments[0]).apply (null, arguments[1])).then (value => {
+          if (value && value.content && value.content.targetElement) {
+            value.content.sizes = {
+              teWidth: value.content.targetElement.offsetWidth,
+              teHeight: value.content.targetElement.offsetHeight,
+              teLeft: value.content.targetElement.offsetLeft,
+              teTop: value.content.targetElement.offsetTop,
+              wDeltaX: window.outerWidth - window.innerWidth,
+              wDeltaY: window.outerHeight - window.innerHeight,
+            };
+          }
+          return value;
+        });
+      }, [$_[0], [$arg]], timeout => $timeout * 2)->then (sub {
         my $res = $_[0];
         my $value = $res->json->{value};
         unless (defined $value and
@@ -182,7 +194,16 @@ sub run_processor ($$) {
             return error_response $app, $sdata->{config}, 'Bad result',
                 "$wdskey: Bad JavaScript response: " . perl2json_bytes $value;
           }
-          return $session->screenshot (element => $value->{content}->{targetElement})->then (sub {
+          return Promise->resolve->then (sub {
+            return unless defined $value->{content}->{targetElement};
+            my $ss = $value->{content}->{sizes};
+            return $session->set_window_dimension (
+              $ss->{wDeltaX} + $ss->{teLeft} + $ss->{teWidth} + 100,
+              $ss->{wDeltaY} + $ss->{teTop} + $ss->{teHeight} + 100,
+            );
+          })->then (sub {
+            return $session->screenshot (element => $value->{content}->{targetElement});
+          })->then (sub {
             if (($value->{content}->{imageType} // '') eq 'jpeg') {
               return $session->execute (q{
                 var blob = new Blob ([Uint8Array.from (arguments[0])]);
@@ -197,8 +218,7 @@ sub run_processor ($$) {
                   canvas.height = img.naturalHeight;
                   var ctx = canvas.getContext ('2d');
                   ctx.drawImage (img, 0, 0);
-                  return canvas.toDataURL ("image/jpeg", {quality: arguments[1]
-});
+                  return canvas.toDataURL ("image/jpeg", arguments[1]);
                 });
               }, [
                 [map { ord $_ } split //, $_[0]],
