@@ -194,11 +194,14 @@ sub run_processor ($$) {
             return error_response $app, $sdata->{config}, 'Bad result',
                 "$wdskey: Bad JavaScript response: " . perl2json_bytes $value;
           }
-          my $ss = $value->{content}->{sizes};
-          return $session->set_window_dimension (
-            $ss->{wDeltaX} + $ss->{teLeft} + $ss->{teWidth} + 100,
-            $ss->{wDeltaY} + $ss->{teTop} + $ss->{teHeight} + 100,
-          )->then (sub {
+          return Promise->resolve->then (sub {
+            return unless defined $value->{content}->{targetElement};
+            my $ss = $value->{content}->{sizes};
+            return $session->set_window_dimension (
+              $ss->{wDeltaX} + $ss->{teLeft} + $ss->{teWidth} + 100,
+              $ss->{wDeltaY} + $ss->{teTop} + $ss->{teHeight} + 100,
+            );
+          })->then (sub {
             return $session->screenshot (element => $value->{content}->{targetElement});
           })->then (sub {
             if (($value->{content}->{imageType} // '') eq 'jpeg') {
