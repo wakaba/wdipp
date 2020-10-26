@@ -23,6 +23,7 @@ sub get_session ($) {
   my $sdata = shift;
 
   my $max_count = $sdata->{config}->{max_wd_sessions} || 4;
+  my $ss_timeout = $sdata->{config}->{wd_session_start_timeout} || 60;
   my $created;
   my $create_session = sub {
     my $wd = Web::Driver::Client::Connection->new_from_url
@@ -69,7 +70,7 @@ sub get_session ($) {
           warn "Failed to create a session: $_[0]";
           return not 'done';
         });
-      } timeout => 60, interval => 15;
+      } timeout => $ss_timeout, interval => 15;
     })->then (sub {
       die unless defined $session;
       return $sdata->{wds}->{$key} = [$wd, $session, $done, $abort, (not 'in use'), $key];
