@@ -19,6 +19,7 @@ use WorkerState;
 my $DEBUG = $ENV{WDIPP_DEBUG};
 
 my $AboutBlank = Web::URL->parse_string ("about:blank");
+my $Creating = 0;
 sub get_session ($) {
   my $sdata = shift;
 
@@ -53,6 +54,8 @@ sub get_session ($) {
           warn "SESSION: $$: Too many sessions ($max_count), wait...\n" if $DEBUG;
           return not 'done';
         }
+        return not 'done' if $Creating > 0;
+        $Creating++;
         return $wd->new_session (
           desired => {},
           #http_proxy_url
@@ -69,6 +72,8 @@ sub get_session ($) {
           }
           warn "Failed to create a session: $_[0]";
           return not 'done';
+        })->finally (sub {
+          $Creating--;
         });
       } timeout => $ss_timeout, interval => 15;
     })->then (sub {
