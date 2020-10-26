@@ -29,10 +29,6 @@ sub get_session ($) {
         (Web::URL->parse_string ($sdata->{config}->{wd_url}));
     my $key = rand;
     my $session;
-    my $done = sub {
-      warn "SESSION: $$: Done $key\n" if $DEBUG;
-      $sdata->{wds}->{$key}->[4] = 0 if defined $sdata->{wds}->{$key};
-    };
     my $abort = sub {
       my $reason = shift;
       warn "SESSION: $$: Abort ($reason) $key\n" if $DEBUG;
@@ -42,7 +38,12 @@ sub get_session ($) {
       undef $session;
       undef $wd;
       return $close;
-    };
+    }; # $abort
+    my $done = sub {
+      warn "SESSION: $$: Done $key\n" if $DEBUG;
+      $sdata->{wds}->{$key}->[4] = 0 if defined $sdata->{wds}->{$key};
+      $abort->() if $sdata->{config}->{no_wd_session_reuse};
+    }; # $done
     return Promise->resolve->then (sub {
       return promised_wait_until {
         die "Create canceled" if $created;

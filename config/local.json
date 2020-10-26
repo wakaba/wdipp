@@ -5,6 +5,7 @@
 
   "wd_url": null,
   "max_wd_sessions": 4,
+  "no_wd_session_reuse": false,
   "processors_dir": null,
   "processors": {
   },
