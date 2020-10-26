@@ -43,7 +43,7 @@ sub get_session ($) {
     my $done = sub {
       warn "SESSION: $$: Done $key\n" if $DEBUG;
       $sdata->{wds}->{$key}->[4] = 0 if defined $sdata->{wds}->{$key};
-      $abort->() if $sdata->{config}->{no_wd_session_reuse};
+      $abort->("No session reuse") if $sdata->{config}->{no_wd_session_reuse};
     }; # $done
     return Promise->resolve->then (sub {
       return promised_wait_until {
@@ -75,7 +75,7 @@ sub get_session ($) {
       die unless defined $session;
       return $sdata->{wds}->{$key} = [$wd, $session, $done, $abort, (not 'in use'), $key];
     }, sub {
-      $abort->("Session creation failed");
+      $abort->("Session creation failed: $_[0]");
       die $_[0];
     });
   }; # $create_session
