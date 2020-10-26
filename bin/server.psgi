@@ -104,7 +104,7 @@ sub get_session ($) {
           }
         }
         return not 'done';
-      } timeout => 60, interval => 3),
+      } timeout => $ss_timeout, interval => 3),
     ])->catch ($ng);
   });
 } # get_session
