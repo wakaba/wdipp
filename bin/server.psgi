@@ -20,8 +20,9 @@ my $DEBUG = $ENV{WDIPP_DEBUG};
 
 my $AboutBlank = Web::URL->parse_string ("about:blank");
 my $Creating = 0;
-sub get_session ($) {
+sub get_session ($$) {
   my $sdata = shift;
+  my $usage = shift;
 
   my $max_count = $sdata->{config}->{max_wd_sessions} || 4;
   my $ss_timeout = $sdata->{config}->{wd_session_start_timeout} || 60;
@@ -33,7 +34,7 @@ sub get_session ($) {
     my $session;
     my $abort = sub {
       my $reason = shift;
-      warn "SESSION: $$: Abort ($reason) $key\n" if $DEBUG;
+      warn "SESSION: $$: Abort ($reason) $key [$usage]\n" if $DEBUG;
       delete $sdata->{wds}->{$key};
       $session->close if defined $session;
       my $close = defined $wd ? $wd->close : undef;
@@ -42,7 +43,7 @@ sub get_session ($) {
       return $close;
     }; # $abort
     my $done = sub {
-      warn "SESSION: $$: Done $key\n" if $DEBUG;
+      warn "SESSION: $$: Done $key [$usage]\n" if $DEBUG;
       $sdata->{wds}->{$key}->[4] = 0 if defined $sdata->{wds}->{$key};
       $abort->("No session reuse") if $sdata->{config}->{no_wd_session_reuse};
     }; # $done
@@ -51,7 +52,7 @@ sub get_session ($) {
         die "Create canceled" if $created;
         my @c = keys %{$sdata->{wds}};
         if (@c >= $max_count) {
-          warn "SESSION: $$: Too many sessions ($max_count), wait...\n" if $DEBUG;
+          warn "SESSION: $$: Too many sessions ($max_count), wait... [$usage]\n" if $DEBUG;
           return not 'done';
         }
         return not 'done' if $Creating > 0;
@@ -61,7 +62,7 @@ sub get_session ($) {
           #http_proxy_url
         )->then (sub {
           $session = $_[0];
-          warn "SESSION: $$: Created (@{[0+keys %{$sdata->{wds}}]}) $key\n" if $DEBUG;
+          warn "SESSION: $$: Created (@{[0+keys %{$sdata->{wds}}]}) $key [$usage]\n" if $DEBUG;
           return 'done';
         }, sub {
           if (UNIVERSAL::isa ($_[0], 'Web::Driver::Client::Response') and
@@ -70,7 +71,7 @@ sub get_session ($) {
                $_[0]->{response}->status == 503)) { # XXX
             warn $_[0]->{response}->body_bytes;
           }
-          warn "Failed to create a session: $_[0]";
+          warn "Failed to create a session: $_[0] [$usage]";
           return not 'done';
         })->finally (sub {
           $Creating--;
@@ -97,7 +98,7 @@ sub get_session ($) {
           my $v = $sdata->{wds}->{$_};
           if (! $v->[4]) {
             $v->[4] = 1;
-            warn "SESSION: $$: Reuse $_\n" if $DEBUG;
+            warn "SESSION: $$: Reuse $_ [$usage]\n" if $DEBUG;
             return $v->[1]->go ($AboutBlank)->then (sub {
               $created = 1;
               $ok->($v);
@@ -156,28 +157,28 @@ sub run_processor ($$) {
   my $wdskey;
   return Promise->resolve->then (sub {
     return promised_timeout {
-      return get_session ($sdata)->then (sub {
+      return get_session ($sdata, $name.':'.$arg)->then (sub {
         my $session;
         my $done;
         (undef, $session, $done, $abort, undef, $wdskey) = @{$_[0]};
         
-    return $js_file->read_char_string->then (sub {
-      return $session->execute (q{
-        return Promise.resolve ().then (() => new Function (arguments[0]).apply (null, arguments[1])).then (value => {
-          if (value && value.content && value.content.targetElement) {
-            value.content.sizes = {
-              teWidth: value.content.targetElement.offsetWidth,
-              teHeight: value.content.targetElement.offsetHeight,
-              teLeft: value.content.targetElement.offsetLeft,
-              teTop: value.content.targetElement.offsetTop,
-              wDeltaX: window.outerWidth - window.innerWidth,
-              wDeltaY: window.outerHeight - window.innerHeight,
-            };
-          }
-          return value;
-        });
-      }, [$_[0], [$arg]], timeout => $timeout * 2)->then (sub {
-        my $res = $_[0];
+        return $js_file->read_char_string->then (sub {
+          return $session->execute (q{
+            return Promise.resolve ().then (() => new Function (arguments[0]).apply (null, arguments[1])).then (value => {
+              if (value && value.content && value.content.targetElement) {
+                value.content.sizes = {
+                  teWidth: value.content.targetElement.offsetWidth,
+                  teHeight: value.content.targetElement.offsetHeight,
+                  teLeft: value.content.targetElement.offsetLeft,
+                  teTop: value.content.targetElement.offsetTop,
+                  wDeltaX: window.outerWidth - window.innerWidth,
+                  wDeltaY: window.outerHeight - window.innerHeight,
+                };
+              }
+              return value;
+            });
+          }, [$_[0], [$arg]], timeout => $timeout * 2)->then (sub {
+            my $res = $_[0];
         my $value = $res->json->{value};
         unless (defined $value and
                 ref $value eq 'HASH' and
@@ -260,10 +261,10 @@ sub run_processor ($$) {
         return error_response $app, $sdata->{config}, 'Failed',
             "$wdskey: Processor error: $_[0]";
       });
-    }, sub { # file not found or error
-      return error_response $app, $sdata->{config}, 'Bad process',
-          "$wdskey: Processor error: $_[0]";
-    })->finally ($done);
+        }, sub { # file not found or error
+          return error_response $app, $sdata->{config}, 'Bad process',
+              "$wdskey: Processor error: $_[0]";
+        })->finally ($done);
       }); # session
     } $timeout;
   })->catch (sub {
@@ -316,10 +317,10 @@ return sub {
         if (@c) {
           return $app->send_plain_text ("");
         }
-        my $done;
+        my $done = sub { };
         return Promise->resolve->then (sub {
           return promised_timeout {
-            return get_session ($sdata)->then (sub {
+            return get_session ($sdata, 'health')->then (sub {
               (undef, undef, $done, undef, undef, undef) = @{$_[0]};
               return 'done';
             });
@@ -329,6 +330,7 @@ return sub {
           return $app->send_plain_text ("");
         }, sub {
           my $e = $_[0];
+          $done->();
           if (UNIVERSAL::isa ($e, 'Promise::AbortError')) {
             return $app->throw_error (504, reason_phrase => 'Timeout (20)');
           }
